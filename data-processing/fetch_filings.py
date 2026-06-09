@@ -2,20 +2,16 @@
 """Fetch the latest earnings call transcript and 10-Q for a ticker."""
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 from edgar import Company, set_identity
 from pypdf import PdfReader
 
+from config import get_edgar_identity
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_DIR = Path("output")
-DEFAULT_EDGAR_IDENTITY = "Sara Cheakdkaipejchara saracheak@gmail.com"
-
-
-def get_edgar_identity() -> str:
-    return os.environ.get("EDGAR_IDENTITY", DEFAULT_EDGAR_IDENTITY)
 
 
 def default_transcript_pdf(ticker: str) -> Path:

@@ -11,15 +11,9 @@ from edgar import Company, set_identity
 from analysis.discrepancy_schemas import RedFlagReport
 from analysis.fact_checker import run_fact_checker
 from analysis.markdown_report import render_audit_markdown
+from config import get_edgar_identity
 
 DEFAULT_OUTPUT_DIR = Path("output")
-DEFAULT_EDGAR_IDENTITY = "Sara Cheakdkaipejchara saracheak@gmail.com"
-
-
-def get_edgar_identity() -> str:
-    import os
-
-    return os.environ.get("EDGAR_IDENTITY", DEFAULT_EDGAR_IDENTITY)
 
 
 def default_ticker_dir(ticker: str) -> Path:

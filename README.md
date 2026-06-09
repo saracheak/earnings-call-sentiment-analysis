@@ -54,14 +54,42 @@ Unverified red flags are discarded by the Fact Checker to reduce false positives
 
 ## Quick start
 
-### 1. Install dependencies
+### 1. Add your personal details
+
+SEC EDGAR requires a real name and email on every request. Set this before running any script that fetches filings.
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and replace the placeholder with your information:
+
+```bash
+EDGAR_IDENTITY="Your Name your.email@example.com"
+```
+
+Load it into your shell session:
+
+```bash
+export EDGAR_IDENTITY="Your Name your.email@example.com"
+```
+
+Or source the file:
+
+```bash
+set -a && source .env && set +a
+```
+
+The `.env` file is gitignored and will not be committed.
+
+### 2. Install dependencies
 
 ```bash
 cd data-processing
 pip install -r requirements.txt
 ```
 
-### 2. Add a transcript PDF
+### 3. Add a transcript PDF
 
 Place the earnings call transcript PDF at:
 
@@ -71,7 +99,7 @@ assets/<ticker>-earnings-call-transcript.pdf
 
 For example: `assets/uber-earnings-call-transcript.pdf`
 
-### 3. Run the full pipeline
+### 4. Run the full pipeline
 
 ```bash
 cd data-processing
@@ -151,9 +179,11 @@ output/
 
 ## Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `EDGAR_IDENTITY` | Email/name required by SEC EDGAR | Project default identity |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EDGAR_IDENTITY` | Yes | Your name and email for SEC EDGAR requests (e.g. `"Jane Doe jane@example.com"`) |
+
+Copy `.env.example` to `.env`, add your details, and export `EDGAR_IDENTITY` before running the pipeline. No paid API keys are used by this project.
 
 Optional CLI flags are available on each script (`--output-dir`, `--transcript-file`, `--ten-k-file`, etc.). Run any script with `-h` for details.
 
