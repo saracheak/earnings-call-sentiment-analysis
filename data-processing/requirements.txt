@@ -1,6 +1,5 @@
 edgartools
 langgraph
-pandas
 pypdf
 pydantic
 requests

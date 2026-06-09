@@ -155,16 +155,6 @@ class DocumentIndex:
         haystack = self._normalize("\n".join(self.lines))
         return any(self._normalize(phrase) in haystack for phrase in phrases if phrase)
 
-    def extract_phrases(self, text: str, *, sizes: tuple[int, ...] = (4, 3)) -> list[str]:
-        words = [word for word in re.findall(r"[A-Za-z0-9$%]+", text.lower()) if len(word) > 2]
-        phrases: list[str] = []
-        for size in sizes:
-            for index in range(0, max(len(words) - size + 1, 0)):
-                phrase = " ".join(words[index : index + size])
-                if len(phrase) >= 12:
-                    phrases.append(phrase)
-        return phrases
-
     def extract_ceo_section(self) -> "DocumentIndex":
         blocks = re.split(r"\.{10,}", "\n".join(self.lines))
         ceo_lines: list[str] = []
