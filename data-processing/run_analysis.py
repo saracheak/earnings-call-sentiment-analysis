@@ -66,13 +66,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    if not os.environ.get("OPENAI_API_KEY"):
-        print(
-            "Error: OPENAI_API_KEY environment variable is required.",
-            file=sys.stderr,
-        )
-        return 1
-
     args = parse_args()
     ticker = args.ticker.upper()
     output_dir = args.output_dir or (DEFAULT_OUTPUT_DIR / ticker / "reports")
