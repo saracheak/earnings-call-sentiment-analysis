@@ -4,93 +4,39 @@
 import argparse
 import os
 import sys
-from datetime import date
 from pathlib import Path
 
-import requests
 from edgar import Company, set_identity
+from pypdf import PdfReader
 
-FMP_BASE_URL = "https://financialmodelingprep.com/stable"
+REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_DIR = Path("output")
 DEFAULT_EDGAR_IDENTITY = "Sara Cheakdkaipejchara saracheak@gmail.com"
-DEFAULT_FMP_API_KEY = "7eQNl9ZJ6ebp3YRXABaK8HXshV8xwNdb"
-
-
-def get_fmp_api_key() -> str:
-    return os.environ.get("FMP_API_KEY", DEFAULT_FMP_API_KEY)
 
 
 def get_edgar_identity() -> str:
     return os.environ.get("EDGAR_IDENTITY", DEFAULT_EDGAR_IDENTITY)
 
 
-def current_calendar_quarter(today: date | None = None) -> tuple[int, int]:
-    today = today or date.today()
-    return today.year, (today.month - 1) // 3 + 1
+def default_transcript_pdf(ticker: str) -> Path:
+    return REPO_ROOT / "assets" / f"{ticker.lower()}-earnings-call-transcript.pdf"
 
 
-def previous_quarter(year: int, quarter: int) -> tuple[int, int]:
-    if quarter == 1:
-        return year - 1, 4
-    return year, quarter - 1
+def earnings_call_pdf_to_txt(pdf_path: Path) -> str:
+    reader = PdfReader(str(pdf_path))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 
-def fetch_transcript(ticker: str, year: int, quarter: int, api_key: str) -> dict | None:
-    response = requests.get(
-        f"{FMP_BASE_URL}/earning-call-transcript",
-        params={
-            "symbol": ticker,
-            "year": year,
-            "quarter": quarter,
-            "apikey": api_key,
-        },
-        timeout=30,
-    )
-
-    if response.status_code == 402:
-        raise RuntimeError(
-            "The FMP earnings transcript endpoint requires a paid subscription. "
-            "Set FMP_API_KEY to an API key with transcript access."
+def save_earnings_transcript(ticker: str, output_dir: Path, pdf_path: Path) -> Path:
+    if not pdf_path.is_file():
+        raise FileNotFoundError(
+            f"No earnings call transcript PDF found at {pdf_path}. "
+            f"Place a PDF at assets/{ticker.lower()}-earnings-call-transcript.pdf "
+            "or pass --transcript-pdf."
         )
-    if response.status_code == 403:
-        raise RuntimeError(
-            "The FMP API key does not have access to earnings transcripts. "
-            "Set FMP_API_KEY to a valid key with transcript access."
-        )
-    if response.status_code != 200:
-        return None
 
-    data = response.json()
-    if not data or not isinstance(data, list):
-        return None
-
-    transcript = data[0]
-    if not transcript.get("content"):
-        return None
-
-    return transcript
-
-
-def find_most_recent_transcript(
-    ticker: str, api_key: str, max_quarters: int = 12
-) -> tuple[int, int, dict]:
-    year, quarter = current_calendar_quarter()
-
-    for _ in range(max_quarters):
-        transcript = fetch_transcript(ticker, year, quarter, api_key)
-        if transcript is not None:
-            return year, quarter, transcript
-        year, quarter = previous_quarter(year, quarter)
-
-    raise RuntimeError(
-        f"No earnings call transcript found for {ticker} in the last {max_quarters} quarters."
-    )
-
-
-def save_earnings_transcript(ticker: str, output_dir: Path, api_key: str) -> Path:
-    year, quarter, transcript = find_most_recent_transcript(ticker, api_key)
-    output_path = output_dir / f"{ticker}_Q{quarter}_{year}_earnings_transcript.txt"
-    output_path.write_text(transcript["content"], encoding="utf-8")
+    output_path = output_dir / f"{ticker}_earnings_transcript.txt"
+    output_path.write_text(earnings_call_pdf_to_txt(pdf_path), encoding="utf-8")
     return output_path
 
 
@@ -115,6 +61,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Directory to save files (default: output/<TICKER>)",
     )
+    parser.add_argument(
+        "--transcript-pdf",
+        type=Path,
+        default=None,
+        help="Path to earnings call transcript PDF (default: assets/<ticker>-earnings-call-transcript.pdf)",
+    )
     return parser.parse_args()
 
 
@@ -123,6 +75,7 @@ def main() -> int:
     ticker = args.ticker.upper()
     output_dir = args.output_dir or (DEFAULT_OUTPUT_DIR / ticker)
     output_dir.mkdir(parents=True, exist_ok=True)
+    transcript_pdf = args.transcript_pdf or default_transcript_pdf(ticker)
 
     errors: list[str] = []
 
@@ -135,9 +88,9 @@ def main() -> int:
     else:
         print(f"Saved 10-Q to {tenq_path}")
 
-    print(f"Fetching most recent earnings call transcript for {ticker}...")
+    print(f"Extracting earnings call transcript for {ticker} from {transcript_pdf}...")
     try:
-        transcript_path = save_earnings_transcript(ticker, output_dir, get_fmp_api_key())
+        transcript_path = save_earnings_transcript(ticker, output_dir, transcript_pdf)
     except Exception as error:
         errors.append(f"earnings transcript: {error}")
         print(f"Failed to save earnings transcript: {error}", file=sys.stderr)
